@@ -452,7 +452,7 @@ class DropperWindow:
         self.recording_job_error = None
         self.recording_job_stop = threading.Event()
         self.update_hint = tk.StringVar()
-        root.title('Dropper · Centro de bots')
+        root.title('HERS Dropper · Centro de bots')
         root.configure(bg=BG)
         width, height, x, y = initial_geometry(root.winfo_screenwidth(), root.winfo_screenheight(), work_area())
         root.geometry(f'{width}x{height}+{x}+{y}')
@@ -462,7 +462,7 @@ class DropperWindow:
         self.styles()
         top = tk.Frame(root, bg=BG, padx=26, pady=22)
         top.pack(fill='x')
-        label(top, 'Dropper', size=18, bold=True, bg=BG).pack(side='left')
+        label(top, 'HERS Dropper', size=18, bold=True, bg=BG).pack(side='left')
         self.sync_button = ttk.Button(top, text='Actualizar', command=self.refresh)
         self.sync_button.pack(side='right')
         tk.Label(top, textvariable=self.update_hint, bg=BG, fg=ACCENT).pack(side='right', padx=12)
@@ -950,7 +950,7 @@ class DropperWindow:
 
     def close(self):
         if any(panel.controller.running for panel in self.panels.values()):
-            if not messagebox.askyesno('Cerrar Dropper', '¿Detener los bots y cerrar? Los Drops pendientes se perderán', parent=self.root):
+            if not messagebox.askyesno('Cerrar HERS Dropper', '¿Detener los bots y cerrar? Los Drops pendientes se perderán', parent=self.root):
                 return
             self.closing = True
             self.recording_job_stop.set()

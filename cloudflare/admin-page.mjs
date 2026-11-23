@@ -9,11 +9,17 @@ const PAGE = String.raw`<!doctype html>
 .report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.report-actions button{font-size:13px;padding:6px 10px}.report-dialog{width:850px}.report-detail{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 monospace;margin:16px 0}.report-image{max-width:100%;height:auto;border:1px solid var(--line)}.row-actions{flex-wrap:wrap}
 #drops-date{width:fit-content}#drops-body article{display:block;margin-bottom:12px}
 #drops-body h2{margin:0}#drops-body ul{padding-left:22px;margin:10px 0 0}#drops-body li{margin:4px 0}
-</style></head><body>
+[data-embedded]:not([data-embedded=""]){background:#0b0b0a;--brand:#c7a78d;--surface:#171614;--panel:#28231f;--line:#473b32;--muted:#c2b5aa}
+[data-embedded]:not([data-embedded=""]) .top,[data-embedded]:not([data-embedded=""]) #login-view,[data-embedded] #embed-error:empty{display:none}
+[data-embedded="bots"] .shell{display:block;min-height:0}
+[data-embedded="operations"] .shell{display:block;min-height:0}
+[data-embedded="operations"] .nav{flex-direction:row;padding:0 0 12px}
+#embed-error{padding:0 16px}
+</style></head><body data-embedded="__EMBEDDED__">
 <header class="top"><div><span class="brand">Dropper</span><span class="muted"> / Administración</span></div><div class="top-right"><button id="logout" hidden>Cerrar sesión</button></div></header>
 <div id="login-view" class="login-wrap" hidden><form id="login-form" class="login-form"><h1 id="login-title">Entrar a Dropper</h1><p id="login-help" class="muted">Introduce tu contraseña de administrador</p><label class="field">Contraseña<input id="admin-password" type="password" autocomplete="current-password" maxlength="256" required></label><label class="field" id="confirm-field" hidden>Repite la contraseña<input id="admin-confirm" type="password" autocomplete="new-password" maxlength="256"></label><button class="primary" id="login-button" type="submit">Entrar</button><div class="error" id="login-error" role="alert"></div></form></div>
 <div class="shell" id="app-view" hidden><nav class="nav" aria-label="Administración"><button id="nav-profiles" aria-selected="true">Bots</button><button id="nav-drops" aria-selected="false">Drops</button><button id="nav-access" aria-selected="false">Ajustes</button></nav><main>
-<section id="profiles-section"><div class="heading"><h1>Bots</h1><div class="actions"><button id="reload">Actualizar</button><button class="primary" id="add">Añadir bot</button></div></div><div class="bot-row"><div><h3>Sesión compartida de AgencyKey</h3><span class="muted" id="recording-session-status">Consultando sesión…</span></div><button id="connect-recording">Conectar AgencyKey</button></div><div id="profiles-error" class="error" role="alert"></div><div id="profiles-body" aria-label="Bots configurados"></div><div class="empty" id="empty" hidden>No hay bots configurados</div></section>
+<section id="profiles-section"><div class="heading"><h1>Bots</h1><div class="actions"><button id="reload">Actualizar</button><button class="primary" id="add">Añadir bot</button></div></div><div class="bot-row" id="recording-settings"><div><h3>Sesión compartida de AgencyKey</h3><span class="muted" id="recording-session-status">Consultando sesión…</span></div><button id="connect-recording">Conectar AgencyKey</button></div><div id="profiles-error" class="error" role="alert"></div><div id="profiles-body" aria-label="Bots configurados"></div><div class="empty" id="empty" hidden>No hay bots configurados</div></section>
 <section id="drops-section" hidden>
 <div class="heading"><div><h1>Resumen diario de Drops</h1><p class="muted">Hora de Caracas</p></div><div class="actions"><button id="drops-today">Hoy</button></div></div>
 <label class="field">Fecha<input id="drops-date" type="date"></label>
@@ -23,6 +29,7 @@ const PAGE = String.raw`<!doctype html>
 <form id="access-form" class="settings-form"><h3>Acceso de las apps</h3><label class="field">Nueva contraseña<input id="access-input" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label><div class="actions"><button class="primary" id="rotate" type="submit">Cambiar contraseña</button></div><p>Se pedirá la nueva contraseña en la próxima descarga de configuraciones.</p><div class="error" id="access-error" role="alert"></div><div class="status" id="access-status" aria-live="polite"></div></form>
 <form id="admin-password-form" class="settings-form"><h3>Acceso de administrador</h3><label class="field">Contraseña actual<input id="admin-current" type="password" autocomplete="current-password" maxlength="256" required></label><label class="field">Nueva contraseña<input id="admin-next" type="password" autocomplete="new-password" minlength="12" maxlength="256" required></label><div class="actions"><button class="primary" id="save-admin-password" type="submit">Cambiar mi contraseña</button></div><div class="error" id="admin-password-error" role="alert"></div><div class="status" id="admin-password-status" aria-live="polite"></div></form></section>
 <div class="status" id="status" aria-live="polite"></div></main></div>
+<p id="embed-error" class="error" role="alert"></p>
 <dialog class="dialog" id="profile-dialog"><form id="profile-form"><h2 id="dialog-title">Añadir bot</h2><label class="field">Token de Telegram<input id="telegram-token" type="password" autocomplete="new-password" maxlength="256"></label><span class="keep" id="keep-hint" hidden>Vacío para conservar el token actual</span><label class="field">Modelo<select id="creator-id" required><option value="">Selecciona una modelo</option></select></label><label class="field">Usuarios de Telegram autorizados<input id="telegram-users" placeholder="@usuario1, @usuario2" maxlength="1750"></label><label class="field">Nombre de OnlyFans<input id="creator-name" readonly></label><div class="error" id="form-error" role="alert"></div><div class="actions"><button type="button" id="cancel">Cancelar</button><button type="submit" class="primary" id="save">Guardar</button></div></form></dialog>
 <dialog class="dialog" id="confirm-dialog"><h2 id="confirm-title"></h2><p id="confirm-message" class="muted"></p><div class="actions"><button id="confirm-cancel">Cancelar</button><button class="primary" id="confirm-accept">Confirmar</button></div></dialog>
 <dialog class="dialog" id="recording-dialog"><h2>Conectar sesión compartida</h2><p id="recording-help" class="muted">Preparando AgencyKey…</p><div class="actions"><button id="recording-cancel">Cancelar</button></div><div class="error" id="recording-error" role="alert"></div></dialog>
@@ -31,6 +38,7 @@ const PAGE = String.raw`<!doctype html>
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
+const embedded=document.body.dataset.embedded;
 const reportZip=__REPORT_ZIP__;
 let currentWebReport=null;
 let dropsRequest=0,followToday=true;
@@ -40,11 +48,22 @@ const feedRows=new Map();
 let renderPending=false;
 let setupToken=new URLSearchParams(location.hash.slice(1)).get('configurar')||'';
 if(location.hash)history.replaceState(null,'',location.pathname);
+function hersSession(){
+ return new Promise((resolve,reject)=>{
+  const {port1,port2}=new MessageChannel();
+  const finish=()=>{clearTimeout(timer);port1.close();};
+  const timer=setTimeout(()=>{finish();reject(new Error('No se pudo recuperar la sesión de HERS'));},10000);
+  port1.onmessage=({data})=>{finish();data?.token?resolve(data.token):reject(new Error('Vuelve a iniciar sesión en HERS'));};
+  parent.postMessage({type:'hers-dropper-session'},location.origin,[port2]);
+ });
+}
 async function api(path,options={}) {
+ const headers={'Content-Type':'application/json',...(options.headers||{})};
+ if(embedded)headers.Authorization='Bearer '+await hersSession();
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
  let response,data;
  try {
-  response=await fetch('/v1/admin'+path,{...options,signal:controller.signal,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json',...(options.headers||{})}});
+  response=await fetch((embedded?'/api/admin/dropper/api':'/v1/admin')+path,{...options,signal:controller.signal,credentials:embedded?'omit':'same-origin',cache:'no-store',headers});
   data=await response.json();
  }catch{
   if(response?.status===401){showLogin();throw new Error('Vuelve a iniciar sesión');}
@@ -60,9 +79,25 @@ function showLogin(){
  stopRecordingPoll();$('recording-dialog').close();if(confirmResolve)finishConfirm(false);
  profiles=[];creators=[];feedRows.clear();renderPending=false;resolveRequest++;$('profiles-body').replaceChildren();$('profile-form').reset();$('agency-form').reset();$('access-form').reset();$('admin-password-form').reset();$('admin-password').value='';$('admin-confirm').value='';
  if($('profile-dialog').open)$('profile-dialog').close();$('app-view').hidden=true;$('logout').hidden=true;$('login-view').hidden=false;
+ if(embedded){$('embed-error').textContent='Vuelve a iniciar sesión en HERS';return;}
  const setup=Boolean(setupToken);$('login-title').textContent=setup?'Crea tu contraseña':'Entrar a Dropper';$('login-help').textContent=setup?'Esta contraseña privada será solo para administrar la web':'Introduce tu contraseña de administrador';$('confirm-field').hidden=!setup;$('admin-confirm').required=setup;$('admin-password').minLength=setup?12:1;$('admin-password').autocomplete=setup?'new-password':'current-password';$('login-button').textContent=setup?'Crear contraseña y entrar':'Entrar';
 }
-async function showApp(){$('login-view').hidden=true;$('app-view').hidden=false;$('logout').hidden=false;$('admin-password').value='';$('admin-confirm').value='';section('profiles');await resumeRecordingConnection();await reload();await recordingStatus();try{const data=await api('/settings');$('api-status').textContent=data.api_configured?'API configurada':'API sin configurar';}catch(error){$('api-error').textContent=error.message;}}
+async function showApp(){
+ $('login-view').hidden=true;$('app-view').hidden=false;$('logout').hidden=Boolean(embedded);$('admin-password').value='';$('admin-confirm').value='';
+ if(embedded){
+  $('nav-profiles').hidden=true;$('admin-password-form').hidden=true;
+  if(embedded==='bots'){
+   $('app-view').querySelector('nav').hidden=true;$('recording-settings').hidden=true;
+   section('profiles');await reload();return;
+  }
+  $('access-section').querySelector('h1').after($('recording-settings'));
+ }
+ section(embedded==='operations'?'drops':'profiles');
+ await resumeRecordingConnection();
+ if(!embedded)await reload();
+ await recordingStatus();
+ try{const data=await api('/settings');$('api-status').textContent=data.api_configured?'API configurada':'API sin configurar';}catch(error){$('api-error').textContent=error.message;}
+}
 $('login-form').addEventListener('submit',async event=>{event.preventDefault();$('login-error').textContent='';if(setupToken&&$('admin-password').value!==$('admin-confirm').value){$('login-error').textContent='Las contraseñas no coinciden';return;}$('login-button').disabled=true;try{await api(setupToken?'/setup':'/login',{method:'POST',body:JSON.stringify({password:$('admin-password').value,...(setupToken?{token:setupToken}:{})})});setupToken='';await showApp();}catch(error){$('login-error').textContent=error.message;}finally{$('login-button').disabled=false;}});
 $('logout').addEventListener('click',async()=>{if(!await askConfirm('¿Cerrar sesión?','Tendrás que entrar de nuevo para administrar tus bots.','Cerrar sesión'))return;try{await api('/logout',{method:'POST',body:'{}'});showLogin();}catch(error){$('profiles-error').textContent=error.message;}});
 $('admin-password-form').addEventListener('submit',async event=>{event.preventDefault();if(!await askConfirm('¿Cambiar tu contraseña?','Las demás sesiones de administración tendrán que iniciar sesión de nuevo.','Cambiar contraseña'))return;$('save-admin-password').disabled=true;$('admin-password-error').textContent='';try{await api('/password',{method:'PUT',body:JSON.stringify({current_password:$('admin-current').value,password:$('admin-next').value})});$('admin-password-form').reset();$('admin-password-status').textContent='Contraseña de administrador cambiada';}catch(error){$('admin-password-error').textContent=error.message;}finally{$('save-admin-password').disabled=false;}});
@@ -266,7 +301,8 @@ async function checkRecording(generation){
   const data=await checkDesktopJob(recordingJob);
   if(generation!==recordingGeneration)return;
   if(data.status==='ready'){
-   stopRecordingPoll();recordingJob=null;$('recording-dialog').close();await recordingStatus();await reload();
+   stopRecordingPoll();recordingJob=null;$('recording-dialog').close();await recordingStatus();
+   if(embedded!=='operations')await reload();
    $('status').textContent='Sesión compartida guardada desde tu PC';return;
   }
   if(['queued','running','finishing'].includes(data.status)){
@@ -303,8 +339,13 @@ async function cancelRecording(){
  finally{recordingBusy=false;$('recording-cancel').disabled=false;}
 }
 $('recording-cancel').addEventListener('click',cancelRecording);$('recording-dialog').addEventListener('cancel',event=>{event.preventDefault();cancelRecording();});
-if(setupToken)showLogin();else api('/session').then(showApp).catch(showLogin);
+if(embedded){
+ if(parent!==window)api('/session').then(showApp).catch(error=>{$('embed-error').textContent=error.message;});
+ else $('embed-error').textContent='Abre esta sección desde el Panel Administración de HERS';
+}else if(setupToken)showLogin();else api('/session').then(showApp).catch(showLogin);
 })();
 </script></body></html>`;
-export function adminPage(nonce){return PAGE.replaceAll('__NONCE__',nonce).replace('__REPORT_ZIP__',reportZip.toString());}
+export function adminPage(nonce, embedded = ''){
+ return PAGE.replaceAll('__NONCE__',nonce).replace('__EMBEDDED__',embedded).replace('__REPORT_ZIP__',reportZip.toString());
+}
 

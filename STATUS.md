@@ -2,6 +2,10 @@
 
 Dropper publica desde Telegram y graba el comprobante en una PC con Windows. El panel de Cloudflare administra los bots y permite consultar las confirmaciones de cada modelo.
 
+## Integración de HERS · 23 de noviembre de 2026
+
+La rama `codex/integracion-hers-y-windows` sirve vistas de Bots y Drops para Hers-prueba y valida el rol de administrador con su Supabase. Usa los perfiles, las publicaciones y la sesión de Chrome que ya guarda D1. El workflow prepara `HERS-Dropper.exe` con la misma base de código y mantiene `Dropper.exe` como descarga compatible. Pasaron las 42 pruebas del Worker y su compilación. Pendientes el flujo de navegador en CI, el ejecutable de Windows y el despliegue.
+
 ## Resumen diario y recuperación desde Telegram
 
 - El [PR #35](https://github.com/Hers-NSB/Dropper/pull/35) incorpora el resumen diario por modelo en hora de Caracas. Dropper conserva las confirmaciones pendientes y las sincroniza cuando recupera la conexión.

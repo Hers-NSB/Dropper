@@ -14,6 +14,60 @@ test('serves a public login page but requires a private admin session for data',
   assert.equal((await request(env,'GET',path,undefined,{'Cf-Access-Authenticated-User-Email':'owner@example.test',Authorization:'Bearer '+env.ADMIN_TOKEN},{access:{getIdentity:async()=>({email:'owner@example.test'})}})).status,401);
  }
 });
+test('HERS uses the same history and bot settings with a verified Supabase administrator',async()=>{
+ const key='public-test-key';
+ const uid='f857cfaf-b708-4307-a47e-a5d321ce3687';
+ const originalFetch=globalThis.fetch;
+ env.HERS_SUPABASE_PUBLISHABLE_KEY=key;
+ globalThis.fetch=async (url,options)=>{
+  if(new URL(url).pathname!=='/auth/v1/user')return originalFetch(url,options);
+  assert.equal(new URL(url).hostname,'glpevkghlzzuwkxojpvc.supabase.co');
+  assert.equal(options.headers.apikey,key);
+  switch(options.headers.Authorization){
+   case 'Bearer verified-admin': return Response.json({id:uid,app_metadata:{role:'admin'}});
+   case 'Bearer self-reported': return Response.json({id:uid,user_metadata:{role:'admin'},app_metadata:{role:'chatter'}});
+   default: return Response.json({}, {status:401});
+  }
+ };
+ const call=(method,path,body,headers={})=>request(env,method,'/v1/hers-admin'+path,body,{Authorization:'Bearer verified-admin',...headers});
+ try{
+  assert.equal((await request(env,'GET','/v1/hers-admin/profiles')).status,401);
+  assert.equal((await call('GET','/profiles',undefined,{Authorization:'Bearer invalid'})).status,401);
+  assert.equal((await call('GET','/drops',undefined,{Authorization:'Bearer self-reported'})).status,403);
+  assert.equal((await call('PUT','/profiles/'+firstId,input,{Origin:'https://other.test'})).status,403);
+  assert.equal((await call('POST','/setup',{})).status,404);
+  assert.equal((await call('POST','/logout',{})).status,404);
+  assert.equal((await call('PUT','/password',{})).status,404);
+  assert.equal((await call('POST','/profiles/'+firstId+'/credentials',{})).status,404);
+  assert.equal((await call('PUT','/profiles/'+firstId,input)).status,200);
+  const desktopProfile=await desktop(env,'POST',credentials);
+  assert.equal((await desktopProfile.json()).telegram_token,firstToken);
+  const listed=await (await call('GET','/profiles')).text();
+  assert.ok(listed.includes('Lilith'));
+  assert.ok(!listed.includes(firstToken));
+  assert.ok(!listed.includes(input.api_key));
+  const day='2026-11-16';
+  const post={drop_id:'a'.repeat(32),position:1,post_id:'101',creator_id:52,creator_name:'Lilith',
+   manual:false,confirmed_at:Date.parse(day+'T12:00:00Z')/1000};
+  assert.equal((await desktop(env,'POST','/v1/drop-publications',{posts:[post]})).status,200);
+  assert.equal((await (await call('GET','/drops?date='+day)).json()).drops[0].automatic,1);
+  const connect=await call('POST','/recording-session/connect',{request_id:firstId});
+  assert.equal(connect.status,202);
+  const {job}=await (await desktop(env,'POST','/v1/recording-desktop-job')).json();
+  assert.equal(job.id,(await connect.json()).id);
+ }finally{globalThis.fetch=originalFetch;}
+});
+test('only embedded views allow same-origin framing',async()=>{
+ for(const view of ['bots','operations']){
+  const response=await request(env,'GET','/embed/'+view);
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'self'/);
+  const html=await response.text();
+  assert.ok(html.includes('data-embedded="'+view+'"'));
+  assert.ok(!html.includes(env.ADMIN_TOKEN));
+ }
+ assert.equal((await request(env,'GET','/embed/unknown')).status,401);
+});
 test('desktop password cannot administer settings or bots',async()=>{
  for(const path of ['/v1/admin/profiles','/v1/admin/resolve','/v1/admin/access','/v1/admin/agencykey'])assert.equal((await desktop(env,'POST',path,{})).status,401);
  assert.equal((await desktop(env,'PUT','/v1/profiles/'+firstId,input)).status,403);

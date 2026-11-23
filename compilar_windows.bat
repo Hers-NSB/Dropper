@@ -10,7 +10,9 @@ if not exist vendor\encoder\ffmpeg.exe (
 )
 .venv\Scripts\python -m PyInstaller --clean --noconfirm Dropper.spec
 if errorlevel 1 goto error
-echo Ejecutable creado en dist\Dropper.exe
+copy /Y dist\Dropper.exe dist\HERS-Dropper.exe > nul
+if errorlevel 1 exit /b 1
+echo Ejecutable creado en dist\HERS-Dropper.exe
 pause
 exit /b 0
 :error

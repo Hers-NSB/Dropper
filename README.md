@@ -8,6 +8,8 @@ Aplicación de Windows que publica los mensajes reenviados a un bot de Telegram 
 - Una API de AgencyKey y un bot de Telegram.
 - [Descargar Dropper para Windows](https://github.com/Hers-NSB/Dropper/releases/latest). Funciona sin instalar Python.
 
+En HERS, descarga `HERS-Dropper.exe` desde **Administración → Dropper**. En ese panel también puedes consultar el historial y conectar la sesión de Chrome. Gestiona los bots y sus verificaciones en **Administración → Conectores → Bots**. El ejecutable conserva el acceso de las apps, los ajustes locales y el mismo servicio Dropper.
+
 ## Primeros pasos
 
 1. En el [panel web](https://dropper.datosenviados07.workers.dev/admin), guarda la clave global de AgencyKey y la contraseña de las apps en **Ajustes**. En **Bots**, configura el token de Telegram, la modelo y los `@usuarios` autorizados para cada bot.
@@ -49,5 +51,7 @@ El historial comienza con la versión de Dropper que sincroniza las confirmacion
 **Reintentar** en Telegram vuelve a grabar el comprobante si el intento anterior terminó.
 
 ## Estado del proyecto
+
+Para habilitar la integración, configura `HERS_SUPABASE_PUBLISHABLE_KEY` en el Worker de Dropper con la clave publicable de Supabase de Hers-prueba. Publica el Worker de Dropper y luego el de HERS con su binding a `dropper`. Las vistas integradas comparten D1 con el panel independiente. El Worker exige una sesión administrativa de Hers-prueba para consultar o modificar datos desde HERS.
 
 Consulta [STATUS.md](STATUS.md) para conocer la versión publicada, las comprobaciones realizadas y la siguiente tarea pendiente.
