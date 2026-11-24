@@ -13,19 +13,27 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
+from app_paths import resource_path
 from cloud_client import CloudClient, CloudError, AccessDenied
 from credential_store import CredentialStore
 from desktop_runtime import BotController
 from config import ConsoleFormatter
 
-BG = '#10131a'
-SURFACE = '#181d27'
-PANEL = '#1f2633'
-BORDER = '#30394a'
-TEXT = '#eef2fa'
-MUTED = '#93a0b6'
-ACCENT = '#738bff'
-GREEN = '#52d9a6'
+BG = '#0b0b0a'
+SURFACE = '#171614'
+PANEL = '#2a2420'
+BORDER = '#493a30'
+TEXT = '#f2ede7'
+MUTED = '#b3a49a'
+ACCENT = '#c7a78d'
+ACCENT_HOVER = '#dfc8b4'
+HOVER = '#392f28'
+DISABLED = '#211e1b'
+DISABLED_TEXT = '#8f8379'
+SELECTION = '#5e4839'
+GREEN = '#a0c6a7'
+WARNING = '#e3bd82'
+ERROR = '#df9f8c'
 MAX_LOG_LINES = 2000
 
 
@@ -86,7 +94,7 @@ class StatusBadge(tk.Canvas):
             return
         self.delete('all')
         modes = {'stopped': ('Detenido', MUTED), 'starting': ('Conectando', ACCENT),
-                 'running': ('En línea', GREEN), 'stopping': ('Deteniendo', '#edbe70'), 'error': ('Revisar error', '#f68d9d')}
+                 'running': ('En línea', GREEN), 'stopping': ('Deteniendo', WARNING), 'error': ('Revisar error', ERROR)}
         text, color = modes[self.mode]
         if self.mode == 'running':
             intensity = (math.sin(self.phase / 10) + 1) / 2
@@ -211,8 +219,8 @@ class BotPanel:
         self.log_toggle.pack(side='right')
         self.save_log_button = ttk.Button(log_title, text='Guardar registro', style='Small.TButton', command=self.save_log)
         self.activity = scrolledtext.ScrolledText(body, wrap='word', state='disabled', font=('Consolas', 9),
-            bg='#121721', fg='#c2ccdc', insertbackground=TEXT, relief='flat', padx=16, pady=14,
-            selectbackground='#394875', borderwidth=0, height=7)
+            bg=BG, fg=TEXT, insertbackground=TEXT, relief='flat', padx=16, pady=14,
+            selectbackground=SELECTION, selectforeground=TEXT, borderwidth=0, height=7)
         self.activity.vbar.pack_forget()
         activity_scroll = ttk.Scrollbar(self.activity.frame, orient='vertical', command=self.activity.yview)
         activity_scroll.pack(side='right', fill='y')
@@ -220,8 +228,8 @@ class BotPanel:
         self.activity.grid(row=7, column=0, sticky='nsew', padx=28, pady=(0, 22))
         self.activity.grid_remove()
         self.log_visible = False
-        self.activity.tag_config('ERROR', foreground='#f68d9d')
-        self.activity.tag_config('WARNING', foreground='#edbe70')
+        self.activity.tag_config('ERROR', foreground=ERROR)
+        self.activity.tag_config('WARNING', foreground=WARNING)
         self.handler = WindowLogHandler(self.events, self.controller.thread_name)
         logging.getLogger().addHandler(self.handler)
         self.refresh_profile(profile)
@@ -277,7 +285,7 @@ class BotPanel:
             self.show_publication('Bot listo', 'Esperando mensajes reenviados en Telegram', color=GREEN)
         elif mode == 'error':
             self.show_publication('No se pudo iniciar o continuar el bot', 'Abre el registro para ver el detalle',
-                                  color='#f68d9d')
+                                  color=ERROR)
         elif mode == 'stopped':
             self.show_publication('Bot detenido')
         self.manager.refresh_sidebar()
@@ -318,7 +326,7 @@ class BotPanel:
                 detail = 'Usa Enviar enlace u Omitir post en Telegram · Ver detalle en el registro'
             else:
                 detail = 'La publicación se detuvo antes de enviar el siguiente mensaje'
-            self.show_publication(f'Drop pausado · {completed} de {total} publicados', detail, '#edbe70')
+            self.show_publication(f'Drop pausado · {completed} de {total} publicados', detail, WARNING)
         else:
             stage = data['stage']
             if processed < total and stage != 'Publicación confirmada':
@@ -394,7 +402,7 @@ class BotPanel:
                 stage = value['stage']
                 count = f' · {value["completed"]}/{value["total"]} posts' if value['total'] and not value.get('error') else ''
                 self.recording_text.set(stage[:1].upper() + stage[1:] + count)
-                self.recording_label.configure(fg='#f68d9d' if value.get('error') else ACCENT)
+                self.recording_label.configure(fg=ERROR if value.get('error') else ACCENT)
                 self.proof.grid()
             elif event == 'setup_stage' and self.mode == 'starting':
                 self.publication_detail.configure(text=f'✓ Configuración cargada · {value}\nConectando el bot con Telegram…')
@@ -453,6 +461,8 @@ class DropperWindow:
         self.recording_job_stop = threading.Event()
         self.update_hint = tk.StringVar()
         root.title('HERS Dropper · Centro de bots')
+        self.app_icon = tk.PhotoImage(master=root, file=str(resource_path('assets/hers-dropper.png')))
+        root.iconphoto(True, self.app_icon)
         root.configure(bg=BG)
         width, height, x, y = initial_geometry(root.winfo_screenwidth(), root.winfo_screenheight(), work_area())
         root.geometry(f'{width}x{height}+{x}+{y}')
@@ -462,6 +472,8 @@ class DropperWindow:
         self.styles()
         top = tk.Frame(root, bg=BG, padx=26, pady=22)
         top.pack(fill='x')
+        self.header_icon = self.app_icon.subsample(2)
+        tk.Label(top, image=self.header_icon, bg=BG, borderwidth=0).pack(side='left', padx=(0, 12))
         label(top, 'HERS Dropper', size=18, bold=True, bg=BG).pack(side='left')
         self.sync_button = ttk.Button(top, text='Actualizar', command=self.refresh)
         self.sync_button.pack(side='right')
@@ -553,10 +565,12 @@ class DropperWindow:
         style.theme_use('clam')
         style.configure('.', font=('Segoe UI', 10), background=SURFACE, foreground=TEXT)
         style.configure('TButton', background=PANEL, foreground=TEXT, padding=(15, 10), borderwidth=0, focuscolor=PANEL)
-        style.map('TButton', background=[('active', '#2c3548'), ('disabled', '#1c2230')], foreground=[('disabled', '#5e6b80')])
-        style.configure('Accent.TButton', background=ACCENT, foreground='#ffffff', font=('Segoe UI', 10, 'bold'))
-        style.map('Accent.TButton', background=[('active', '#859bff'), ('disabled', '#2d3651')])
-        style.configure('Danger.TButton', foreground='#e694a3')
+        style.map('TButton', background=[('disabled', DISABLED), ('active', HOVER)],
+                  foreground=[('disabled', DISABLED_TEXT)])
+        style.configure('Accent.TButton', background=ACCENT, foreground=BG, font=('Segoe UI', 10, 'bold'))
+        style.map('Accent.TButton', background=[('disabled', BORDER), ('active', ACCENT_HOVER)],
+                  foreground=[('disabled', MUTED)])
+        style.configure('Danger.TButton', foreground=ERROR)
         style.configure('Small.TButton', padding=(10, 5), font=('Segoe UI', 9))
         style.configure('TEntry', fieldbackground=PANEL, bordercolor=BORDER, lightcolor=BORDER, darkcolor=BORDER,
                         foreground=TEXT, insertcolor=TEXT, padding=9)
@@ -565,14 +579,15 @@ class DropperWindow:
                   selectforeground=[('readonly', TEXT)], foreground=[('readonly', TEXT)])
         self.root.option_add('*TCombobox*Listbox.background', PANEL)
         self.root.option_add('*TCombobox*Listbox.foreground', TEXT)
-        self.root.option_add('*TCombobox*Listbox.selectBackground', '#394875')
+        self.root.option_add('*TCombobox*Listbox.selectBackground', SELECTION)
+        self.root.option_add('*TCombobox*Listbox.selectForeground', TEXT)
         style.layout('Vertical.TScrollbar', [('Vertical.Scrollbar.trough', {'sticky': 'ns', 'children': [
             ('Vertical.Scrollbar.thumb', {'sticky': 'nswe'})]})])
         style.configure('Publication.Horizontal.TProgressbar', background=GREEN, troughcolor=BORDER,
                         bordercolor=PANEL, lightcolor=GREEN, darkcolor=GREEN)
         style.configure('Vertical.TScrollbar', background=BORDER, troughcolor=BG, darkcolor=BORDER,
                         lightcolor=BORDER, bordercolor=BG, borderwidth=0, width=7, gripcount=0)
-        style.map('Vertical.TScrollbar', background=[('active', '#46546b')])
+        style.map('Vertical.TScrollbar', background=[('active', SELECTION)])
 
     def background(self, work, complete, failed=None):
         def run():
@@ -849,7 +864,7 @@ class DropperWindow:
             row = tk.Frame(self.list_frame, bg=background, padx=13, pady=12,
                            highlightbackground=ACCENT if active else BG, highlightthickness=1)
             row.pack(fill='x', pady=(0, 7))
-            color = GREEN if panel.mode == 'running' else ACCENT if panel.mode in {'starting','stopping'} else '#f68d9d' if panel.mode == 'error' else MUTED
+            color = GREEN if panel.mode == 'running' else ACCENT if panel.mode in {'starting','stopping'} else ERROR if panel.mode == 'error' else MUTED
             name = label(row, f'●  {panel.profile["name"]}', color=color, bold=True, bg=background, anchor='w', wraplength=185)
             name.pack(fill='x')
             model = label(row, '@' + panel.profile['creator']['username'] if panel.profile['creator'].get('username') else '', color=MUTED, size=9, bg=background, anchor='w', wraplength=185)

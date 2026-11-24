@@ -4,13 +4,36 @@ import json
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
 
 
+def check_embedded_icon(executable):
+    from pefile import DIRECTORY_ENTRY, PE, RESOURCE_TYPE
+
+    path = Path(__file__).resolve().parents[1] / 'assets' / 'hers-dropper.ico'
+    data = path.read_bytes()
+    _, _, count = struct.unpack_from('<HHH', data)
+    entries = struct.iter_unpack('<BBBBHHII', data[6:6 + count * 16])
+    expected = {data[offset:offset + size] for *_, size, offset in entries}
+    assert expected, 'Expected HERS icon images'
+
+    with PE(str(executable), fast_load=True) as program:
+        program.parse_data_directories(directories=[DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_RESOURCE']])
+        actual = {
+            program.get_data(language.data.struct.OffsetToData, language.data.struct.Size)
+            for resource in program.DIRECTORY_ENTRY_RESOURCE.entries if resource.id == RESOURCE_TYPE['RT_ICON']
+            for icon in resource.directory.entries
+            for language in icon.directory.entries
+        }
+    assert expected <= actual, 'The executable does not contain all HERS icon sizes'
+
+
 def main():
     source = Path(sys.argv[1]).resolve()
+    check_embedded_icon(source)
     with tempfile.TemporaryDirectory(prefix='recorder-exe-') as directory:
         root = Path(directory)
         folder = root / 'Aplicación con espacios ñ'
