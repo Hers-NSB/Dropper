@@ -115,13 +115,13 @@ jobs:
             qa-output/scroll-demo.mp4
           if-no-files-found: error
           retention-days: 30
-      - name: Publish private download
+      - name: Publish Windows release
         if: github.ref == 'refs/heads/main'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "recorder-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" \
+          gh release create "hers-dropper-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" \
             dist/Dropper.exe dist/HERS-Dropper.exe vendor/encoder/encoder-sources.tar.gz \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "HERS Dropper · Windows" \
@@ -133,7 +133,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          keep="recorder-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          keep="hers-dropper-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
           latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           test "$latest" = "$keep"
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$keep" --jq .object.sha)" = "$GITHUB_SHA"

@@ -2,3 +2,4 @@
 - Si falla un post, **Enviar enlace** confirma una publicación manual y **Omitir post** continúa con las demás.
 - El comprobante incluye los posts automáticos y manuales confirmados del Drop.
 - Descarga `HERS-Dropper.exe` para Windows. `Dropper.exe` contiene la misma compilación.
+- HERS Dropper usa el logo de HERS con esquinas redondeadas y la paleta del Panel Administración.
