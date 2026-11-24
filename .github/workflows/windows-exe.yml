@@ -99,16 +99,19 @@ jobs:
       - run: node --test cloudflare/admin.test.mjs
       - name: Build standalone executable
         run: python -m PyInstaller --clean --noconfirm Dropper.spec
+      - name: Prepare HERS download
+        run: Copy-Item dist/Dropper.exe dist/HERS-Dropper.exe
       - name: Test EXE without Python commands
         env:
           AGENCYKEY_RECORDER_DEMO_EXPORT: qa-output/scroll-demo.mp4
-        run: python scripts/smoke_exe.py dist/Dropper.exe
+        run: python scripts/smoke_exe.py dist/HERS-Dropper.exe
       - name: Preserve tested executable
         uses: actions/upload-artifact@v4
         with:
           name: Dropper-Windows
           path: |
             dist/Dropper.exe
+            dist/HERS-Dropper.exe
             qa-output/scroll-demo.mp4
           if-no-files-found: error
           retention-days: 30
@@ -119,9 +122,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "recorder-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" \
-            dist/Dropper.exe vendor/encoder/encoder-sources.tar.gz \
+            dist/Dropper.exe dist/HERS-Dropper.exe vendor/encoder/encoder-sources.tar.gz \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Dropper · Resumen diario y control de publicaciones" \
+            --title "HERS Dropper · Windows" \
             --notes-file release-notes.md --latest
       - name: Verify released Windows downloads
         if: github.ref == 'refs/heads/main'
@@ -136,6 +139,7 @@ jobs:
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$keep" --jq .object.sha)" = "$GITHUB_SHA"
           mkdir -p verified-release
           gh release download "$keep" --repo "$GITHUB_REPOSITORY" --dir verified-release \
-            --pattern Dropper.exe --pattern encoder-sources.tar.gz
+            --pattern Dropper.exe --pattern HERS-Dropper.exe --pattern encoder-sources.tar.gz
           cmp dist/Dropper.exe verified-release/Dropper.exe
+          cmp dist/HERS-Dropper.exe verified-release/HERS-Dropper.exe
           cmp vendor/encoder/encoder-sources.tar.gz verified-release/encoder-sources.tar.gz

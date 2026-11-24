@@ -6,6 +6,56 @@ import {spawnSync} from 'node:child_process';
 import worker,{saveSharedSession} from './worker.mjs';
 import {origin,makeEnvironment,installUpstream,input,firstId,firstToken,secondToken,desktop,admin} from './test-support.mjs';
 
+test('HERS separates the embedded bot tools from the history and settings',async()=>{
+ const {env,sqlite}=makeEnvironment();installUpstream();
+ env.HERS_SUPABASE_PUBLISHABLE_KEY='public-test-key';
+ const upstream=globalThis.fetch;
+ globalThis.fetch=async (url,options)=>{
+  if(new URL(url).pathname!=='/auth/v1/user')return upstream(url,options);
+  if(options.headers.Authorization!=='Bearer test-hers-admin')return Response.json({}, {status:401});
+  return Response.json({id:firstId,app_metadata:{role:'admin'}});
+ };
+ await admin(env,'PUT','/v1/admin/agencykey',{api_key:input.api_key});
+ await admin(env,'PUT','/v1/admin/profiles/'+firstId,input);
+ const browser=await chromium.launch({headless:true,executablePath:process.env.RECORDER_TEST_CHROME,channel:process.env.RECORDER_TEST_CHROME?undefined:(process.platform==='win32'?'msedge':'chrome')});
+ try{
+  const page=await browser.newPage({viewport:{width:420,height:900}});
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.route(origin+'/**',async route=>{
+   const req=route.request();
+   const url=new URL(req.url());
+   if(url.pathname==='/hers'){
+    return route.fulfill({contentType:'text/html',body:`<iframe id="operations" title="Dropper" src="/embed/operations"></iframe>
+      <iframe id="bots" title="Bots" src="/embed/bots"></iframe><script>addEventListener('message',event=>{
+      if(event.origin===location.origin && event.data?.type==='hers-dropper-session'){
+        event.ports[0].postMessage({token:'test-hers-admin'});event.ports[0].close();}
+      });</script>`});
+   }
+   const init={method:req.method(),headers:await req.allHeaders()};
+   if(req.postDataBuffer())init.body=req.postDataBuffer();
+   url.pathname=url.pathname.replace('/api/admin/dropper/api/', '/v1/hers-admin/');
+   const response=await worker.fetch(new Request(url,init),env);
+   return route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});
+  });
+  await page.goto(origin+'/hers');
+  const operations=page.frameLocator('#operations');
+  await operations.getByRole('heading',{name:'Resumen diario de Drops'}).waitFor();
+  await operations.getByRole('button',{name:'Ajustes',exact:true}).click();
+  await operations.getByRole('button',{name:'Conectar AgencyKey'}).waitFor();
+  assert.equal(await operations.getByRole('button',{name:'Añadir bot'}).count(),0);
+  assert.equal(await operations.getByRole('heading',{name:'Acceso de administrador'}).count(),0);
+
+  const bots=page.frameLocator('#bots');
+  await bots.getByRole('button',{name:'Editar Lilith',exact:true}).waitFor();
+  await bots.getByRole('button',{name:'Verificar Mi perfil de Lilith',exact:true}).waitFor();
+  assert.equal(await bots.getByRole('button',{name:'Ajustes',exact:true}).count(),0);
+  assert.equal(await bots.getByRole('button',{name:'Conectar AgencyKey'}).count(),0);
+  assert.deepEqual(errors,[]);
+ }finally{
+  await browser.close();sqlite.close();globalThis.fetch=upstream;
+ }
+});
+
 test('password administrator configures a shared API, selects models and rotates app password',async()=>{
  const {env,sqlite}=makeEnvironment();const upstream=installUpstream();env.ADMIN_SETUP=JSON.stringify({token:'browser-private-setup',expires:Date.now()+3600000});
  const browser=await chromium.launch({headless:true,executablePath:process.env.RECORDER_TEST_CHROME,channel:process.env.RECORDER_TEST_CHROME?undefined:(process.platform==='win32'?'msedge':'chrome')});

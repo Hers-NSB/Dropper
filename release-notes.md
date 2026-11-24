@@ -1,4 +1,4 @@
 - Dropper reúne las publicaciones confirmadas de cada Drop por día de Caracas y modelo en el panel web.
 - Si falla un post, **Enviar enlace** confirma una publicación manual y **Omitir post** continúa con las demás.
 - El comprobante incluye los posts automáticos y manuales confirmados del Drop.
-- El ejecutable de Windows se llama `Dropper.exe`.
+- Descarga `HERS-Dropper.exe` para Windows. `Dropper.exe` contiene la misma compilación.

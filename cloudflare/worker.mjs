@@ -503,12 +503,12 @@ function jobStatus(job) {
   return job.status;
 }
 
-async function recordingAdmin(request, env, path) {
+async function recordingAdmin(request, env, path, hersOwner) {
   const root='/v1/admin/recording-session';
   if (path===root && request.method==='GET') return json(await sharedSession(env));
   const report = path.match(/^\/v1\/admin\/recording-session\/feed\/([a-f0-9-]{36})\/(diagnostic|report)$/);
   if (report && request.method==='GET') return webVerificationReport(request,env,report[1],report[2]==='report');
-  const owner=await sessionId(sessionToken(request));
+  const owner=hersOwner ?? await sessionId(sessionToken(request));
   let entry=await readDesktopJob(env);
   if (path===root+'/active' && request.method==='GET') {
     if (!entry || (entry.job.owner!==owner && !entry.job.recover)) return json({status:'none'});
@@ -673,13 +673,15 @@ async function dailyDrops(request, env) {
   return json({date:day,today,drops:results});
 }
 
-async function adminHandle(request, env, path) {
-  if (path === '/v1/admin/login' && request.method === 'POST') return adminLogin(request,env);
-  if (path === '/v1/admin/setup' && request.method === 'POST') return adminLogin(request,env,true);
-  await authorizeAdmin(request, env);
+async function adminHandle(request, env, path, hersOwner) {
+  if (!hersOwner) {
+    if (path === '/v1/admin/login' && request.method === 'POST') return adminLogin(request,env);
+    if (path === '/v1/admin/setup' && request.method === 'POST') return adminLogin(request,env,true);
+    await authorizeAdmin(request, env);
+  }
   if (request.method !== 'GET') originCheck(request);
   if (path === '/v1/admin/drops' && request.method === 'GET') return dailyDrops(request,env);
-  if (path.startsWith('/v1/admin/recording-session')) return recordingAdmin(request,env,path);
+  if (path.startsWith('/v1/admin/recording-session')) return recordingAdmin(request,env,path,hersOwner);
   if (path === '/v1/admin/logout' && request.method === 'POST') {
     await env.DB.prepare('DELETE FROM settings WHERE key = ?').bind(await sessionId(sessionToken(request))).run();
     const response=json({authenticated:false});
@@ -767,16 +769,47 @@ async function adminHandle(request, env, path) {
   return json({id, name: creator.name, bot_id: botId, creator, revision: revision+1, updated_at: now});
 }
 
+const hersActions = /^\/(?:session|drops|settings|agencykey|creators|access|resolve|profiles(?:\/[a-f0-9-]{36})?|recording-session(?:\/(?:active|connect|check|cancel|feed\/[a-f0-9-]{36}(?:\/(?:diagnostic|report))?))?)$/;
+
+async function hersAdmin(request, env, action) {
+  if (!hersActions.test(action)) throw new ApiError(404, 'Operación de Dropper no disponible');
+  if (request.method !== 'GET') originCheck(request);
+  const token = request.headers.get('Authorization');
+  if (!/^Bearer [\w.-]+$/.test(token || '') || token.length > 6144) throw new ApiError(401, 'Inicia sesión en HERS');
+  if (!env.HERS_SUPABASE_PUBLISHABLE_KEY) throw new ApiError(503, 'Acceso desde HERS sin configurar');
+  let response;
+  try {
+    response = await fetch('https://glpevkghlzzuwkxojpvc.supabase.co/auth/v1/user', {
+      headers: {apikey:env.HERS_SUPABASE_PUBLISHABLE_KEY, Authorization:token}, redirect:'manual', cache:'no-store',
+    });
+  } catch {
+    throw new ApiError(502, 'No se pudo verificar la sesión de HERS');
+  }
+  if (response.status === 401 || response.status === 403) throw new ApiError(401, 'Vuelve a iniciar sesión en HERS');
+  if (!response.ok) throw new ApiError(502, 'No se pudo verificar la sesión de HERS');
+  const user = await response.json();
+  if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(user?.id || '') || user.app_metadata?.role !== 'admin') {
+    throw new ApiError(403, 'Acceso exclusivo para administradores de HERS');
+  }
+  return adminHandle(request, env, '/v1/admin'+action, 'hers_admin:'+user.id);
+}
+
+function adminDocument(request, embedded = '') {
+  if (request.method !== 'GET') throw new ApiError(405, 'Método no permitido');
+  const nonce = base64url(crypto.getRandomValues(new Uint8Array(18)));
+  const ancestors = embedded ? "'self'" : "'none'";
+  return new Response(adminPage(nonce, embedded), {headers: {'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
+    'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors ${ancestors}`}});
+}
+
 async function handle(request, env) {
   const path = new URL(request.url).pathname;
   if (path === '/') return Response.redirect(new URL('/admin',request.url).href,302);
-  if (path === '/admin' || path === '/admin/') {
-    if (request.method !== 'GET') throw new ApiError(405, 'Método no permitido');
-    const nonce = base64url(crypto.getRandomValues(new Uint8Array(18)));
-    return new Response(adminPage(nonce), {headers: {'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
-      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
-  }
+  if (path === '/admin' || path === '/admin/') return adminDocument(request);
+  const view = path.match(/^\/embed\/(bots|operations)$/);
+  if (view) return adminDocument(request, view[1]);
+  if (path.startsWith('/v1/hers-admin/')) return hersAdmin(request, env, path.slice('/v1/hers-admin'.length));
   if (path === '/health' && request.method === 'GET') return json({service: 'dropper', version: 9});
   if (path.startsWith('/v1/admin/')) return adminHandle(request, env, path);
   await authorize(request, env);

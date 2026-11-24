@@ -5,6 +5,7 @@
   "database_id": "af967841-8448-4b5d-8663-bc04b31d6669",
   "compatibility_date": "2026-11-10",
   "binding": "DB",
+  "hers_supabase_publishable_key_binding": "HERS_SUPABASE_PUBLISHABLE_KEY",
   "compatibility_flags": [
     "nodejs_compat"
   ]
