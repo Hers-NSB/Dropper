@@ -15,6 +15,6 @@ La rama `codex/integracion-hers-y-windows` sirve vistas de Bots y Drops para Her
 ## Producción
 
 - Cloudflare sirve al 100 % la versión **17** del Worker, `248f16f5-0d8c-4df6-acb2-e929b04f2d45`, código `4de4ed3` del [PR #37](https://github.com/Hers-NSB/Dropper/pull/37). Las vistas de HERS usan la D1 existente. El [panel independiente](https://dropper.datosenviados07.workers.dev/admin) continúa disponible.
-- El release [`recorder-58-1`](https://github.com/Hers-NSB/Dropper/releases/tag/recorder-58-1) contiene [`HERS-Dropper.exe`](https://github.com/Hers-NSB/Dropper/releases/download/recorder-58-1/HERS-Dropper.exe). El [workflow de Windows](https://github.com/Hers-NSB/Dropper/actions/runs/45416920984) verificó el ejecutable publicado.
+- El release [`hers-dropper-60-1`](https://github.com/Hers-NSB/Dropper/releases/tag/hers-dropper-60-1) contiene [`HERS-Dropper.exe`](https://github.com/Hers-NSB/Dropper/releases/download/hers-dropper-60-1/HERS-Dropper.exe). El [workflow de Windows](https://github.com/Hers-NSB/Dropper/actions/runs/45419721702) verificó el ejecutable publicado, incluido el icono redondeado de HERS en los siete tamaños. El [PR #38](https://github.com/Hers-NSB/Dropper/pull/38) aplica la paleta del Panel Administración a la app.
 
 Consulta [README.md](README.md) para configurar los bots, recuperar publicaciones y consultar el resumen.
